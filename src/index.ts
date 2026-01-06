@@ -4,15 +4,16 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import auth from './routes/auth.js';
+import conversations from './routes/conversations.js';
 const app = express();
 dotenv.config();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 app.use(bodyParser.urlencoded());
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-const allowList = ['localhost:3000']
+const allowList = ['localhost:3000'] ///set frontend url here
 
 let corsOptionDelegate = (req: express.Request, callback: CallableFunction)=>{
     let corsOption = {
@@ -38,11 +39,12 @@ app.get('/',(req, res)=>{
 });
 
 app.use('/auth/', auth);
+app.use('/conversations/', conversations);
 
 
 //add middleware here
 
 
 app.listen(PORT, ()=>{
-    console.log(`Server listening at PORT: ${PORT}`);
+    console.log(`Server listening at PORT: ${process.env.PORT}`);
 })

@@ -19,14 +19,14 @@ model User{
   email         String      @unique()
   password      String
   role          UserType  
-  supervisorId  String      
+  supervisorId  String?      
 }
 
 model Conversation{
   id            String      @id @default(uuid())
-  candidateId   String      
-  agentId       String      
-  supervisorId  String
+  candidateId   String?      
+  agentId       String?      
+  supervisorId  String?
   status        Status
   createdAt     DateTime    @default(now())
 }
@@ -34,9 +34,9 @@ model Conversation{
 model Message{
   id                  String       @id @default(uuid())
   // conversation        Conversation @relation(fields: [conversationId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  conversationId      String
-  agentId             String
-  supervisorId        String
+  conversationId      String?
+  agentId             String?
+  supervisorId        String?
   status              Status      @default(closed)
   createdAt           DateTime    @default(now())
 }

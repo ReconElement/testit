@@ -87,7 +87,7 @@ auth.post("/signup", async (req: express.Request, res: express.Response)=>{
             }else{
                 res.status(404).json({
                     success: false,
-                    data: "Please try again. Login unsuccessful"
+                    error: "Please try again. Login unsuccessful"
                 })
             };
         };
@@ -116,14 +116,14 @@ auth.post("/signup", async (req: express.Request, res: express.Response)=>{
             }else{
                 res.status(404).json({
                     success: false,
-                    data: "Please try again. Login unsuccessful"
+                    error: "Please try again. Login unsuccessful"
                 })
             };
         }
         if(!isNotAgent.success && !isAgent.success){
             res.status(404).json({
                 success: false,
-                data: "Error occurred during API validation, please try again with valid parameters"
+                error: "Error occurred during API validation, please try again with valid parameters"
             })
         }
     } catch (e) {
@@ -134,12 +134,13 @@ auth.post("/signup", async (req: express.Request, res: express.Response)=>{
     }
 });
 
-    auth.post("/login",async (req: express.Request, res: express.Response)=>{
+auth.post("/login",async (req: express.Request, res: express.Response)=>{
     try{
         const body = loginZodValidation.safeParse(req.body);
         if(!body.success){
             res.status(404).json({
-                message: "Error occurred during API validation, please try again with valid parameters"
+                success: false,
+                error: "Error occurred during API validation, please try again with valid parameters"
             });
             return;
         }
@@ -151,7 +152,8 @@ auth.post("/signup", async (req: express.Request, res: express.Response)=>{
         });
         if(!user){
             res.status(404).json({
-                message: "User not found with the provided credentials"
+                success: false,
+                error: "User not found with the provided credentials"
             });
             return;
         };
@@ -159,12 +161,14 @@ auth.post("/signup", async (req: express.Request, res: express.Response)=>{
             const match = await bcrypt.compare(password, user.password);
             if(!match){
                 res.status(401).json({
-                    message: "Unauthorized access, please provide the correct password"
+                    success: false,
+                    error: "Unauthorized access, please provide the correct password"
                 });
                 return;
             }
             else{
-                const token = jwt.sign({id: user.id}, process.env.SECRET_KEY, {expiresIn: "1hr"});
+                const token = jwt.sign({userId: user.id, role: user.role}, process.env.SECRET_KEY, {expiresIn: "1hr"});
+                res.setHeader("Authorization", `Bearer ${token}`);
                 res.status(200).json({
                     success: true,
                     data: {
@@ -176,15 +180,58 @@ auth.post("/signup", async (req: express.Request, res: express.Response)=>{
         }
     }catch(e){
         res.status(500).json({
-            message: "Internal Server Error"
+            success: false,
+            error: "Internal Server Error"
         });
         console.log(`Error during login: ${e}`);
         return;
     }
 });
 
-auth.post("/me", async (req, res)=>{
-    
+auth.get("/me", async (req: express.Request, res: express.Response)=>{
+    try{
+        const requestAuthHeader = req.get("Authorization");
+        if(requestAuthHeader){
+            let bearer = requestAuthHeader.split(' ')[1];
+            if(bearer){
+                let verify = jwt.verify(bearer, process.env.SECRET_KEY);
+                if(typeof verify==='object'){
+                    const {userId, role} = verify;
+                    const user = await prisma.user.findUnique({
+                        where: {id: userId}
+                    });
+                    if(user){
+                        res.status(200).json({
+                            success: true,
+                            data: {
+                                _id: user.id,
+                                name: user.name,
+                                email: user.email,
+                                role: user.role,
+                            }
+                        })
+                    }else{
+                        res.status(404).json({
+                            success: false,
+                            error: "User is deleted"
+                        })
+                    }
+                }else{
+                    res.status(404).json({
+                        success: false,
+                        error: "Send the jwt bearer token in correct format"
+                    })
+                }
+            }
+        }else{
+            res.status(404).json({
+                success: false,
+                error: "Auth header not present in request, please make sure to include it"
+            })
+        }
+    }catch(e){
+        console.log(`Error occurred: ${e}`);
+    }
 })
 
 export default auth;
